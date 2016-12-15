@@ -1,20 +1,22 @@
 use std::marker::PhantomData;
-use std::rc::Rc;
-
-use color::Color;
 use linear::Vector2;
+
+pub use std::rc::Rc;
+pub use color::Color;
 
 pub trait Widget {
   fn get_rect(&self) -> Rect;
+  fn redraw<V>(&self, view: &mut V) where V: WidgetView<Self> {
+    view.redraw(self)
+  }
 }
 
-pub trait WidgetContainer: Widget {
-  fn get_widgets(&self) -> &[Rc<Widget>];
-  fn add_widget(&mut self, widget: Rc<Widget>);
+pub trait WidgetView<W: ?Sized> {
+  fn redraw(&mut self, widget: &W);
 }
 
-type Px = u32;
-type Pos = Vector2<Px>;
+pub type Px = u32;
+pub type Pos = Vector2<Px>;
 
 pub mod layout {
   pub struct Horizontal;
@@ -41,7 +43,6 @@ impl Rect {
 pub struct FillRectWidget<L> {
   color: Color,
   rect: Rect,
-  widgets: Vec<Rc<Widget>>,
   _l: PhantomData<L>
 }
 
@@ -50,7 +51,6 @@ impl<L> FillRectWidget<L> {
     FillRectWidget {
       color: color,
       rect: rect,
-      widgets: Vec::new(),
       _l: PhantomData
     }
   }
@@ -62,52 +62,32 @@ impl<L> Widget for FillRectWidget<L> {
   }
 }
 
-impl<L> WidgetContainer for FillRectWidget<L> {
-  fn get_widgets(&self) -> &[Rc<Widget>] {
-    &self.widgets
-  }
-
-  fn add_widget(&mut self, widget: Rc<Widget>) {
-    self.widgets.push(widget);
-  }
-}
-
-pub struct TopWidget<L> {
+pub struct GUI<L> {
   rect: Rect,
   widgets: Vec<Rc<Widget>>,
   _l: PhantomData<L>
 }
 
-impl<L> TopWidget<L> {
+impl<L> GUI<L> {
   pub fn new(w: Px, h: Px) -> Self {
-    TopWidget {
+    GUI {
       rect: Rect::new(Pos::new(0, 0), w, h),
-      widgets: Vec::new(),
       _l: PhantomData
     }
   }
-
 }
 
-impl<L> Widget for TopWidget<L> {
+impl<L> Widget for GUI<L> {
   fn get_rect(&self) -> Rect {
     self.rect.clone()
   }
 }
 
-impl<L> WidgetContainer for TopWidget<L> {
-  fn get_widgets(&self) -> &[Rc<Widget>] {
-    &self.widgets
+// TESTS ONLY
+pub struct ConsoleView;
+
+impl<L> WidgetView<GUI<L>> for ConsoleView {
+  fn redraw(&mut self, widget: &GUI<L>) {
+    deb!("redrawing GUI: {:#?}", widget.rect);
   }
-
-  fn add_widget(&mut self, widget: Rc<Widget>) {
-    self.widgets.push(widget);
-  }
-}
-
-fn test() {
-  let mut top = TopWidget::<layout::Vertical>::new(100, 100);
-  let fill = FillRectWidget::<layout::Floating>::new(Rect::new(Pos::new(0, 0), 10, 10), Color::new(1., 0., 0.));
-
-  top.add_widget(Rc::new(fill));
 }
