@@ -6,22 +6,15 @@ pub use color::Color;
 
 pub trait Widget {
   fn get_rect(&self) -> Rect;
-  fn redraw<V>(&self, view: &mut V) where V: WidgetView<Self> {
-    view.redraw(self)
-  }
-}
-
-pub trait WidgetView<W: ?Sized> {
-  fn redraw(&mut self, widget: &W);
 }
 
 pub type Px = u32;
 pub type Pos = Vector2<Px>;
 
-pub mod layout {
-  pub struct Horizontal;
-  pub struct Vertical;
-  pub struct Floating;
+pub enum Layout {
+  Horizontal,
+  Vertical,
+  Floating
 }
 
 // Upper-left is origin.
@@ -40,54 +33,74 @@ impl Rect {
   }
 }
 
-pub struct FillRectWidget<L> {
+#[derive(Debug)]
+pub struct FillRectWidget {
   color: Color,
-  rect: Rect,
-  _l: PhantomData<L>
+  rect: Rect
 }
 
-impl<L> FillRectWidget<L> {
+impl FillRectWidget {
   pub fn new(rect: Rect, color: Color) -> Self {
     FillRectWidget {
       color: color,
-      rect: rect,
-      _l: PhantomData
+      rect: rect
     }
   }
 }
 
-impl<L> Widget for FillRectWidget<L> {
+impl Widget for FillRectWidget {
   fn get_rect(&self) -> Rect {
     self.rect.clone()
   }
 }
 
-pub struct GUI<L> {
+pub struct GUI {
   rect: Rect,
-  widgets: Vec<Rc<Widget>>,
-  _l: PhantomData<L>
+  layout: Layout,
+  color: Color,
+  widgets: Vec<Rc<FillRectWidget>>,
 }
 
-impl<L> GUI<L> {
-  pub fn new(w: Px, h: Px) -> Self {
+impl GUI {
+  pub fn new(w: Px, h: Px, layout: Layout, color: Color) -> Self {
     GUI {
       rect: Rect::new(Pos::new(0, 0), w, h),
-      _l: PhantomData
+      layout: layout,
+      color: color,
+      widgets: Vec::new()
     }
+  }
+
+  pub fn add_fill_rect(&mut self, widget: Rc<FillRectWidget>) {
+    self.widgets.push(widget)
   }
 }
 
-impl<L> Widget for GUI<L> {
+impl Widget for GUI {
   fn get_rect(&self) -> Rect {
     self.rect.clone()
   }
+}
+
+pub trait WidgetView<W> {
+  fn redraw(&mut self, widget: &W);
 }
 
 // TESTS ONLY
 pub struct ConsoleView;
 
-impl<L> WidgetView<GUI<L>> for ConsoleView {
-  fn redraw(&mut self, widget: &GUI<L>) {
+impl WidgetView<GUI> for ConsoleView {
+  fn redraw(&mut self, widget: &GUI) {
     deb!("redrawing GUI: {:#?}", widget.rect);
+
+    for child in &widget.widgets {
+      <ConsoleView as WidgetView<FillRectWidget>>::redraw(self, child);
+    }
+  }
+}
+
+impl WidgetView<FillRectWidget> for ConsoleView {
+  fn redraw(&mut self, widget: &FillRectWidget) {
+    deb!("redrawing FillRectWidget: {:#?}", widget);
   }
 }
