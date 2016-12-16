@@ -35,10 +35,16 @@ impl Rect {
   }
 }
 
+/// Class of usable widgets.
+///
+/// As-is, a widget is not a usable object because it lacks interpretation. For instance, having a
+/// *slider* without a way to render it or treat events is plain useless. This trait solves that
+/// by providing interpretation (`V`) to a widget.
 pub trait Widget<V> {
   fn redraw(&self, view: &mut V);
 }
 
+/// A simple widget representing a colored rectangular area.
 #[derive(Debug)]
 pub struct FillRectWidget {
   color: Color,
@@ -54,19 +60,18 @@ impl FillRectWidget {
   }
 }
 
+/// “Entry point” of widgets.
 pub struct RootWidget<V> {
   rect: Rect,
   layout: Layout,
-  color: Color,
   widgets: Vec<Box<Widget<V>>>,
 }
 
 impl<V> RootWidget<V> {
-  pub fn new(w: Px, h: Px, layout: Layout, color: Color) -> Self {
+  pub fn new(w: Px, h: Px, layout: Layout) -> Self {
     RootWidget {
       rect: Rect::new(Pos::new(0, 0), w, h),
       layout: layout,
-      color: color,
       widgets: Vec::new()
     }
   }
@@ -81,7 +86,7 @@ pub struct ConsoleView;
 
 impl Widget<ConsoleView> for RootWidget<ConsoleView> {
   fn redraw(&self, view: &mut ConsoleView) {
-    deb!("{:#?} {:#?} {:#?}", self.rect, self.layout, self.color);
+    deb!("{:#?} {:#?}", self.rect, self.layout);
     
     for widget in &self.widgets {
       widget.redraw(view);
