@@ -12,50 +12,67 @@ const WIDGET_VIEW_RESOLUTION: Uniform<[u32; 2]> = Uniform::new(0);
 const WIDGET_VIEW_WIDGET_RECT: Uniform<[i32; 4]> = Uniform::new(1);
 const WIDGET_VIEW_WIDGET_COLOR: Uniform<[f32; 3]> = Uniform::new(2);
 
-/// Default widget interpretor.
-pub struct WidgetView {
+/// Default widget interpretor state.
+pub struct WidgetViewSt<'a> {
   // available framebuffer for the whole GUI
   framebuffer: Framebuffer<Flat, Dim2, Texture<Flat, Dim2, RGBA32F>, ()>,
   // program used to render widgets
-  program: Rc<Program>,
+  program: Id<'a, Program>,
   // used to render rectangular area
   quad: Tess,
   // buffer of rectangular area to raw
   fillrect_buffer: Vec<(Rect, Color)>
 }
 
-impl WidgetView {
-  pub fn new(w: u32, h: u32, scene: &mut Scene) -> Self {
+impl<'a> WidgetViewSt<'a> {
+  pub fn new(w: u32, h: u32, scene: &mut Scene<'a>) -> Self {
     let framebuffer = Framebuffer::new((w, h), 0).unwrap();
-    let program = scene.get("spectra/gui/default.glsl", vec![
+    let program = scene.get_id("spectra/gui/default.glsl", vec![
       Uniform::<[u32; 2]>::sem("resolution"),
       Uniform::<[i32; 4]>::sem("widget_rect"),
       Uniform::<[f32; 3]>::sem("widget_color")
     ]).unwrap();
     let quad = Tess::attributeless(Mode::TriangleStrip, 4);
 
-    WidgetView {
+    WidgetViewSt {
       framebuffer: framebuffer,
       program: program,
       quad: quad,
       fillrect_buffer: Vec::new()
     }
   }
+}
+
+/// Default widget interpretor.
+pub struct WidgetView<'a> {
+  state: &'a mut WidgetViewSt<'a>,
+  program: Rc<Program>
+}
+
+impl<'a> WidgetView<'a> {
+  pub fn new(st: &'a mut WidgetViewSt<'a>, scene: &mut Scene<'a>) -> Self {
+    let program = scene.get_by_id(&st.program).unwrap();
+
+    WidgetView {
+      state: st,
+      program: program
+    }
+  }
 
   fn clear_buffers(&mut self) {
-    self.fillrect_buffer.clear();
+    self.state.fillrect_buffer.clear();
   }
 }
 
-impl InterpretedWidget<WidgetView> for RootWidget<WidgetView> {
-  fn redraw(&self, _: Rect, view: &mut WidgetView) {
+impl<'a> InterpretedWidget<WidgetView<'a>> for RootWidget<WidgetView<'a>> {
+  fn redraw(&self, _: Rect, view: &mut WidgetView<'a>) {
     // clear the previous render’s buffers
     view.clear_buffers();
 
     redraw_children(self.layout.clone(), self.rect.clone(), &self.widgets, view);
 
     // make the damn render
-    Pipeline::new(&view.framebuffer, [0., 0., 0., 1.], &[], &[], vec![
+    Pipeline::new(&view.state.framebuffer, [0., 0., 0., 1.], &[], &[], vec![
       Pipe::new(|program| {
           program.update(&WIDGET_VIEW_RESOLUTION, [self.rect.width() as u32, self.rect.height() as u32]);
         },
@@ -65,9 +82,9 @@ impl InterpretedWidget<WidgetView> for RootWidget<WidgetView> {
   }
 }
 
-impl InterpretedWidget<WidgetView> for FillRectWidget {
-  fn redraw(&self, computed_rect: Rect, view: &mut WidgetView) {
-    view.fillrect_buffer.push((computed_rect.clone(), self.color.clone()));
+impl<'a> InterpretedWidget<WidgetView<'a>> for FillRectWidget {
+  fn redraw(&self, computed_rect: Rect, view: &mut WidgetView<'a>) {
+    view.state.fillrect_buffer.push((computed_rect.clone(), self.color.clone()));
   }
 }
 
