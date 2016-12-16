@@ -19,6 +19,18 @@ pub enum Positioning {
   Tiling
 }
 
+/// Rectangular area in 2D. The origin of the space coordinates is at the upper-left corner.
+///
+///  ·----> (x)
+///  |
+///  |   L---------A
+///  v   |         |
+/// (y)  |         |
+///      |         |
+///      B---------U
+///
+/// Here, the point *U* is called the *lower* point and the point *U* is called the *upper* point.
+/// `(A - L).x = width` and `(B - L).y = height`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Rect {
   pub lower: Pos,
