@@ -1,6 +1,7 @@
 use luminance::{Dim2, Flat, Mode, RGBA32F};
 use luminance_gl::gl33::{Framebuffer, Pipe, Pipeline, RenderCommand, ShadingCommand, Tess, Texture,
                          Uniform};
+use std::rc::Rc;
 
 use id::Id;
 use gui::widget::{Color, FillRectWidget, InterpretedWidget, Layout, Pos, Positioning, Rect, RootWidget};
@@ -12,21 +13,21 @@ const WIDGET_VIEW_WIDGET_RECT: Uniform<[i32; 4]> = Uniform::new(1);
 const WIDGET_VIEW_WIDGET_COLOR: Uniform<[f32; 3]> = Uniform::new(2);
 
 /// Default widget interpretor.
-pub struct WidgetView<'a> {
+pub struct WidgetView {
   // available framebuffer for the whole GUI
   framebuffer: Framebuffer<Flat, Dim2, Texture<Flat, Dim2, RGBA32F>, ()>,
   // program used to render widgets
-  program: Id<'a, Program>,
+  program: Rc<Program>,
   // used to render rectangular area
   quad: Tess,
   // buffer of rectangular area to raw
   fillrect_buffer: Vec<(Rect, Color)>
 }
 
-impl<'a> WidgetView<'a> {
-  pub fn new(w: u32, h: u32, scene: &mut Scene<'a>) -> Self {
+impl WidgetView {
+  pub fn new(w: u32, h: u32, scene: &mut Scene) -> Self {
     let framebuffer = Framebuffer::new((w, h), 0).unwrap();
-    let program = scene.get_id("spectra/gui/default.glsl", vec![
+    let program = scene.get("spectra/gui/default.glsl", vec![
       Uniform::<[u32; 2]>::sem("resolution"),
       Uniform::<[i32; 4]>::sem("widget_rect"),
       Uniform::<[f32; 3]>::sem("widget_color")
@@ -46,8 +47,8 @@ impl<'a> WidgetView<'a> {
   }
 }
 
-impl<'a> InterpretedWidget<WidgetView<'a>> for RootWidget<WidgetView<'a>> {
-  fn redraw(&self, _: Rect, view: &mut WidgetView<'a>) {
+impl InterpretedWidget<WidgetView> for RootWidget<WidgetView> {
+  fn redraw(&self, _: Rect, view: &mut WidgetView) {
     // clear the previous render’s buffers
     view.clear_buffers();
 
@@ -55,12 +56,17 @@ impl<'a> InterpretedWidget<WidgetView<'a>> for RootWidget<WidgetView<'a>> {
 
     // make the damn render
     Pipeline::new(&view.framebuffer, [0., 0., 0., 1.], &[], &[], vec![
+      Pipe::new(|program| {
+          program.update(&WIDGET_VIEW_RESOLUTION, [self.rect.width() as u32, self.rect.height() as u32]);
+        },
+        ShadingCommand::new(&view.program, vec![
+        ]))
     ]).run();
   }
 }
 
-impl<'a> InterpretedWidget<WidgetView<'a>> for FillRectWidget {
-  fn redraw(&self, computed_rect: Rect, view: &mut WidgetView<'a>) {
+impl InterpretedWidget<WidgetView> for FillRectWidget {
+  fn redraw(&self, computed_rect: Rect, view: &mut WidgetView) {
     view.fillrect_buffer.push((computed_rect.clone(), self.color.clone()));
   }
 }
