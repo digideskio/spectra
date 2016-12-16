@@ -23,14 +23,14 @@ pub enum Positioning {
 ///
 ///  ·----> (x)
 ///  |
-///  |   L---------A
+///  |   L---------·
 ///  v   |         |
 /// (y)  |         |
 ///      |         |
-///      B---------U
+///      ·---------U
 ///
 /// Here, the point *U* is called the *lower* point and the point *U* is called the *upper* point.
-/// `(A - L).x = width` and `(B - L).y = height`.
+/// `U.x - L.x == width` and `U.y - L.y == height`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Rect {
   pub lower: Pos,
