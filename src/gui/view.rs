@@ -53,14 +53,14 @@ impl<'a> InterpretedWidget<WidgetView<'a>> for RootWidget<WidgetView<'a>> {
 
     // redraw all the children!
     match self.layout {
-      Layout::Horizontal(positioning) => {
-        match positioning {
+      Layout::Horizontal(ref positioning) => {
+        match *positioning {
           Positioning::First => {
             let mut lower = self.rect.lower.clone();
 
             for widget in &self.widgets {
               let widget_rect = widget.rect();
-              let w = widget_rect.upper.x - widget_rect.lower.x;
+              let w = widget_rect.width();
               let rect = Rect::new(lower.clone(), Pos::new(lower.x + w, self.rect.upper.y));
 
               widget.redraw(rect, view);
@@ -74,7 +74,7 @@ impl<'a> InterpretedWidget<WidgetView<'a>> for RootWidget<WidgetView<'a>> {
 
             for widget in &self.widgets {
               let widget_rect = widget.rect();
-              let w = widget_rect.upper.x - widget_rect.lower.x;
+              let w = widget_rect.width();
               let rect = Rect::new(Pos::new(upper.x - w, self.rect.lower.y), upper.clone());
 
               widget.redraw(rect, view);
@@ -84,31 +84,76 @@ impl<'a> InterpretedWidget<WidgetView<'a>> for RootWidget<WidgetView<'a>> {
           },
 
           Positioning::Tiling => {
-            let widget_w = (((self.rect.upper.x - self.rect.lower.x) as f32) / self.widgets.len() as f32) as i32;
+            let w = ((self.rect.width() as f32) / self.widgets.len() as f32) as i32;
             let mut lower = self.rect.lower;
 
             for widget in &self.widgets {
-              let rect = Rect::new(lower.clone(), Pos::new(widget_w, lower.y));
+              let rect = Rect::new(lower.clone(), Pos::new(lower.x + w, self.rect.upper.y));
+
+              widget.redraw(rect, view);
+
+              lower.x += w;
             }
           }
         }
       },
 
-      Layout::Vertical(positioning) => {
-        match positioning {
+      Layout::Vertical(ref positioning) => {
+        match *positioning {
           Positioning::First => {
+            let mut lower = self.rect.lower.clone();
+
+            for widget in &self.widgets {
+              let widget_rect = widget.rect();
+              let h = widget_rect.height();
+              let rect = Rect::new(lower.clone(), Pos::new(self.rect.upper.x, lower.y + h));
+
+              widget.redraw(rect, view);
+
+              lower.y += h;
+            }
+          },
+
+          Positioning::Last => {
             let mut upper = self.rect.upper.clone();
 
             for widget in &self.widgets {
               let widget_rect = widget.rect();
-              let h = widget_rect.lower.y - widget_rect.upper.y;
-              let rect = Rect::new(Pos::new(self.rect.lower.x, upper.y + h), upper.clone);
+              let h = widget_rect.height();
+              let rect = Rect::new(Pos::new(self.rect.lower.x, upper.y - h), upper.clone());
+
+              widget.redraw(rect, view);
+
+              upper.y -= h;
+            }
+          },
+
+          Positioning::Tiling => {
+            let h = ((self.rect.height() as f32) / self.widgets.len() as f32) as i32;
+            let mut lower = self.rect.lower;
+
+            for widget in &self.widgets {
+              let rect = Rect::new(lower.clone(), Pos::new(self.rect.upper.x, lower.y + h));
+
+              widget.redraw(rect, view);
+
+              lower.y += h;
             }
           }
         }
+      },
+
+      Layout::Floating => {
+        for widget in &self.widgets {
+          let widget_rect = widget.rect();
+          let lower = self.rect.lower + widget_rect.lower;
+          let dim = Pos::new(widget_rect.width(), widget_rect.height());
+          let rect = Rect::new(lower, lower + dim);
+
+          widget.redraw(rect, view);
+        }
       }
     }
-
 
     // make the damn render
     Pipeline::new(&view.framebuffer, [0., 0., 0., 1.], &[], &[], vec![

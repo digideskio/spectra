@@ -39,8 +39,8 @@ pub struct Rect {
 
 impl Rect {
   pub fn new(lower: Pos, upper: Pos) -> Self {
-    let mut out_lower: Pos;
-    let mut out_upper: Pos;
+    let mut out_lower = Pos::new(0, 0);
+    let mut out_upper = Pos::new(0, 0);
 
     if lower.x <= upper.x {
       out_lower.x = lower.x;
@@ -69,6 +69,14 @@ impl Rect {
       lower: Pos::new(upper_left.x, upper_left.y + h),
       upper: Pos::new(upper_left.x + w, upper_left.y)
     }
+  }
+
+  pub fn width(&self) -> Px {
+    self.upper.x - self.lower.x
+  }
+
+  pub fn height(&self) -> Px {
+    self.upper.y - self.lower.y
   }
 }
 
