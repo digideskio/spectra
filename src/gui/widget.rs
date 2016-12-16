@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use linear::Vector2;
 
 pub use color::Color;
@@ -37,14 +39,14 @@ impl Rect {
 
 /// Class of widgets.
 pub trait Widget {
-  fn get_rect(&self) -> Rect;
+  fn name(&self) -> String;
+  fn rect(&self) -> Rect;
 }
 
 /// Class of widgets that can contain other widgets.
 ///
 /// In order to contain other widgets, those widgets must be interpreted.
 pub trait WidgetContainer<V>: Widget {
-  fn get_widgets(&self) -> &[Box<InterpretedWidget<V>>];
   fn add_widget(&mut self, widget: Box<InterpretedWidget<V>>);
 }
 
@@ -60,13 +62,15 @@ pub trait InterpretedWidget<V>: Widget {
 /// A simple widget representing a colored rectangular area.
 #[derive(Debug)]
 pub struct FillRectWidget {
+  name: String,
   color: Color,
   rect: Rect
 }
 
 impl FillRectWidget {
-  pub fn new(rect: Rect, color: Color) -> Self {
+  pub fn new(name: &str, rect: Rect, color: Color) -> Self {
     FillRectWidget {
+      name: name.to_owned(),
       color: color,
       rect: rect
     }
@@ -74,7 +78,11 @@ impl FillRectWidget {
 }
 
 impl Widget for FillRectWidget {
-  fn get_rect(&self) -> Rect {
+  fn name(&self) -> String {
+    self.name.clone()
+  }
+
+  fn rect(&self) -> Rect {
     self.rect.clone()
   }
 }
@@ -83,7 +91,7 @@ impl Widget for FillRectWidget {
 pub struct RootWidget<V> {
   rect: Rect,
   layout: Layout,
-  widgets: Vec<Box<InterpretedWidget<V>>>,
+  widgets: HashMap<String, Box<InterpretedWidget<V>>>,
 }
 
 impl<V> RootWidget<V> {
@@ -91,24 +99,24 @@ impl<V> RootWidget<V> {
     RootWidget {
       rect: Rect::new(Pos::new(0, 0), w, h),
       layout: layout,
-      widgets: Vec::new()
+      widgets: HashMap::new()
     }
   }
 }
 
 impl<V> Widget for RootWidget<V> {
-  fn get_rect(&self) -> Rect {
+  fn name(&self) -> String {
+    "".to_owned()
+  }
+
+  fn rect(&self) -> Rect {
     self.rect.clone()
   }
 }
 
 impl<V> WidgetContainer<V> for RootWidget<V> {
-  fn get_widgets(&self) -> &[Box<InterpretedWidget<V>>] {
-    &self.widgets
-  }
-
   fn add_widget(&mut self, widget: Box<InterpretedWidget<V>>) {
-    self.widgets.push(widget)
+    let _ = self.widgets.insert(widget.name(), widget);
   }
 }
 
