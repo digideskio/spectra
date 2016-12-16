@@ -1,8 +1,9 @@
 use luminance::{Dim2, Flat, Mode, RGBA32F};
-use luminance_gl::gl33::{Framebuffer, Tess, Texture, Uniform};
+use luminance_gl::gl33::{Framebuffer, Pipe, Pipeline, RenderCommand, ShadingCommand, Tess, Texture,
+                         Uniform};
 
 use id::Id;
-use gui::widget::FillRectWidget;
+use gui::widget::{Color, FillRectWidget, InterpretedWidget, Rect, RootWidget};
 use scene::Scene;
 use shader::Program;
 
@@ -17,7 +18,9 @@ pub struct WidgetView<'a> {
   // program used to render widgets
   program: Id<'a, Program>,
   // used to render rectangular area
-  quad: Tess
+  quad: Tess,
+  // buffer of rectangular area to raw
+  fillrect_buffer: Vec<(Rect, Color)>
 }
 
 impl<'a> WidgetView<'a> {
@@ -33,8 +36,34 @@ impl<'a> WidgetView<'a> {
     WidgetView {
       framebuffer: framebuffer,
       program: program,
-      quad: quad
+      quad: quad,
+      fillrect_buffer: Vec::new()
     }
+  }
+
+  fn clear_buffers(&mut self) {
+    self.fillrect_buffer.clear();
   }
 }
 
+impl<'a> InterpretedWidget<WidgetView<'a>> for RootWidget<WidgetView<'a>> {
+  fn redraw(&self, view: &mut WidgetView<'a>) {
+    // clear the previous render’s buffers
+    view.clear_buffers();
+
+    // fill up the buffers
+    for widget in &self.widgets {
+      // TODO
+    }
+
+    // make the damn render
+    Pipeline::new(&view.framebuffer, [0., 0., 0., 1.], &[], &[], vec![
+    ]).run();
+  }
+}
+
+impl<'a> InterpretedWidget<WidgetView<'a>> for FillRectWidget {
+  fn redraw(&self, view: &mut WidgetView<'a>) {
+    view.fillrect_buffer.push((self.rect.clone(), self.color.clone()));
+  }
+}

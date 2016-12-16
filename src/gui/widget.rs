@@ -63,8 +63,8 @@ pub trait InterpretedWidget<V>: Widget {
 #[derive(Debug)]
 pub struct FillRectWidget {
   name: String,
-  color: Color,
-  rect: Rect
+  pub color: Color,
+  pub rect: Rect
 }
 
 impl FillRectWidget {
@@ -89,9 +89,9 @@ impl Widget for FillRectWidget {
 
 /// “Entry point” of widgets.
 pub struct RootWidget<V> {
-  rect: Rect,
-  layout: Layout,
-  widgets: HashMap<String, Box<InterpretedWidget<V>>>,
+  pub rect: Rect,
+  pub layout: Layout,
+  pub widgets: HashMap<String, Box<InterpretedWidget<V>>>,
 }
 
 impl<V> RootWidget<V> {
