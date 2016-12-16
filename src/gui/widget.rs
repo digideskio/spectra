@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use linear::Vector2;
 
 pub use color::Color;
@@ -21,15 +19,40 @@ pub enum Positioning {
   Tiling
 }
 
-// Upper-left is origin.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Rect {
-  lower: Pos,
-  upper: Pos
+  pub lower: Pos,
+  pub upper: Pos
 }
 
 impl Rect {
-  pub fn new(upper_left: Pos, w: Px, h: Px) -> Self {
+  pub fn new(lower: Pos, upper: Pos) -> Self {
+    let mut out_lower: Pos;
+    let mut out_upper: Pos;
+
+    if lower.x <= upper.x {
+      out_lower.x = lower.x;
+      out_upper.x = upper.x;
+    } else {
+      out_lower.x = upper.x;
+      out_upper.x = lower.x;
+    }
+
+    if lower.y <= upper.y {
+      out_lower.y = lower.y;
+      out_upper.y = upper.y;
+    } else {
+      out_lower.y = upper.y;
+      out_upper.y = lower.y;
+    }
+
+    Rect {
+      lower: out_lower,
+      upper: out_upper
+    }
+  }
+
+  pub fn new_wh(upper_left: Pos, w: Px, h: Px) -> Self {
     Rect {
       lower: Pos::new(upper_left.x, upper_left.y + h),
       upper: Pos::new(upper_left.x + w, upper_left.y)
@@ -56,7 +79,7 @@ pub trait WidgetContainer<V>: Widget {
 /// *slider* without a way to render it or treat events is plain useless. This trait solves that
 /// by providing interpretation (`V`) to a widget.
 pub trait InterpretedWidget<V>: Widget {
-  fn redraw(&self, view: &mut V);
+  fn redraw(&self, computed_rect: Rect, view: &mut V);
 }
 
 /// A simple widget representing a colored rectangular area.
@@ -91,15 +114,15 @@ impl Widget for FillRectWidget {
 pub struct RootWidget<V> {
   pub rect: Rect,
   pub layout: Layout,
-  pub widgets: HashMap<String, Box<InterpretedWidget<V>>>,
+  pub widgets: Vec<Box<InterpretedWidget<V>>>,
 }
 
 impl<V> RootWidget<V> {
   pub fn new(w: Px, h: Px, layout: Layout) -> Self {
     RootWidget {
-      rect: Rect::new(Pos::new(0, 0), w, h),
+      rect: Rect::new_wh(Pos::new(0, 0), w, h),
       layout: layout,
-      widgets: HashMap::new()
+      widgets: Vec::new()
     }
   }
 }
@@ -116,7 +139,7 @@ impl<V> Widget for RootWidget<V> {
 
 impl<V> WidgetContainer<V> for RootWidget<V> {
   fn add_widget(&mut self, widget: Box<InterpretedWidget<V>>) {
-    let _ = self.widgets.insert(widget.name(), widget);
+    let _ = self.widgets.push(widget);
   }
 }
 

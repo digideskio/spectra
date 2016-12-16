@@ -3,7 +3,7 @@ use luminance_gl::gl33::{Framebuffer, Pipe, Pipeline, RenderCommand, ShadingComm
                          Uniform};
 
 use id::Id;
-use gui::widget::{Color, FillRectWidget, InterpretedWidget, Rect, RootWidget};
+use gui::widget::{Color, FillRectWidget, InterpretedWidget, Layout, Pos, Positioning, Rect, RootWidget};
 use scene::Scene;
 use shader::Program;
 
@@ -47,14 +47,68 @@ impl<'a> WidgetView<'a> {
 }
 
 impl<'a> InterpretedWidget<WidgetView<'a>> for RootWidget<WidgetView<'a>> {
-  fn redraw(&self, view: &mut WidgetView<'a>) {
+  fn redraw(&self, _: Rect, view: &mut WidgetView<'a>) {
     // clear the previous render’s buffers
     view.clear_buffers();
 
-    // fill up the buffers
-    for widget in &self.widgets {
-      // TODO
+    // redraw all the children!
+    match self.layout {
+      Layout::Horizontal(positioning) => {
+        match positioning {
+          Positioning::First => {
+            let mut lower = self.rect.lower.clone();
+
+            for widget in &self.widgets {
+              let widget_rect = widget.rect();
+              let w = widget_rect.upper.x - widget_rect.lower.x;
+              let rect = Rect::new(lower.clone(), Pos::new(lower.x + w, self.rect.upper.y));
+
+              widget.redraw(rect, view);
+
+              lower.x += w;
+            }
+          },
+
+          Positioning::Last => {
+            let mut upper = self.rect.upper.clone();
+
+            for widget in &self.widgets {
+              let widget_rect = widget.rect();
+              let w = widget_rect.upper.x - widget_rect.lower.x;
+              let rect = Rect::new(Pos::new(upper.x - w, self.rect.lower.y), upper.clone());
+
+              widget.redraw(rect, view);
+
+              upper.x -= w;
+            }
+          },
+
+          Positioning::Tiling => {
+            let widget_w = (((self.rect.upper.x - self.rect.lower.x) as f32) / self.widgets.len() as f32) as i32;
+            let mut lower = self.rect.lower;
+
+            for widget in &self.widgets {
+              let rect = Rect::new(lower.clone(), Pos::new(widget_w, lower.y));
+            }
+          }
+        }
+      },
+
+      Layout::Vertical(positioning) => {
+        match positioning {
+          Positioning::First => {
+            let mut upper = self.rect.upper.clone();
+
+            for widget in &self.widgets {
+              let widget_rect = widget.rect();
+              let h = widget_rect.lower.y - widget_rect.upper.y;
+              let rect = Rect::new(Pos::new(self.rect.lower.x, upper.y + h), upper.clone);
+            }
+          }
+        }
+      }
     }
+
 
     // make the damn render
     Pipeline::new(&view.framebuffer, [0., 0., 0., 1.], &[], &[], vec![
@@ -63,7 +117,7 @@ impl<'a> InterpretedWidget<WidgetView<'a>> for RootWidget<WidgetView<'a>> {
 }
 
 impl<'a> InterpretedWidget<WidgetView<'a>> for FillRectWidget {
-  fn redraw(&self, view: &mut WidgetView<'a>) {
-    view.fillrect_buffer.push((self.rect.clone(), self.color.clone()));
+  fn redraw(&self, computed_rect: Rect, view: &mut WidgetView<'a>) {
+    view.fillrect_buffer.push((computed_rect.clone(), self.color.clone()));
   }
 }
