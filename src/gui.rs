@@ -111,22 +111,3 @@ impl<V> WidgetContainer<V> for RootWidget<V> {
     self.widgets.push(widget)
   }
 }
-
-// TESTS ONLY
-pub struct ConsoleView;
-
-impl InterpretedWidget<ConsoleView> for RootWidget<ConsoleView> {
-  fn redraw(&self, view: &mut ConsoleView) {
-    deb!("{:#?} {:#?}", self.rect, self.layout);
-    
-    for widget in &self.widgets {
-      widget.redraw(view);
-    }
-  }
-}
-
-impl InterpretedWidget<ConsoleView> for FillRectWidget {
-  fn redraw(&self, _: &mut ConsoleView) {
-    deb!("{:#?}", self);
-  }
-}
