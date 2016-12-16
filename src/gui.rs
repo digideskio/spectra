@@ -35,12 +35,25 @@ impl Rect {
   }
 }
 
-/// Class of usable widgets.
+/// Class of widgets.
+pub trait Widget {
+  fn get_rect(&self) -> Rect;
+}
+
+/// Class of widgets that can contain other widgets.
+///
+/// In order to contain other widgets, those widgets must be interpreted.
+pub trait WidgetContainer<V>: Widget {
+  fn get_widgets(&self) -> &[Box<InterpretedWidget<V>>];
+  fn add_widget(&mut self, widget: Box<InterpretedWidget<V>>);
+}
+
+/// Class of widget interpretors.
 ///
 /// As-is, a widget is not a usable object because it lacks interpretation. For instance, having a
 /// *slider* without a way to render it or treat events is plain useless. This trait solves that
 /// by providing interpretation (`V`) to a widget.
-pub trait Widget<V> {
+pub trait InterpretedWidget<V>: Widget {
   fn redraw(&self, view: &mut V);
 }
 
@@ -60,11 +73,17 @@ impl FillRectWidget {
   }
 }
 
+impl Widget for FillRectWidget {
+  fn get_rect(&self) -> Rect {
+    self.rect.clone()
+  }
+}
+
 /// “Entry point” of widgets.
 pub struct RootWidget<V> {
   rect: Rect,
   layout: Layout,
-  widgets: Vec<Box<Widget<V>>>,
+  widgets: Vec<Box<InterpretedWidget<V>>>,
 }
 
 impl<V> RootWidget<V> {
@@ -75,8 +94,20 @@ impl<V> RootWidget<V> {
       widgets: Vec::new()
     }
   }
+}
 
-  pub fn add_fill_rect(&mut self, widget: Box<Widget<V>>) {
+impl<V> Widget for RootWidget<V> {
+  fn get_rect(&self) -> Rect {
+    self.rect.clone()
+  }
+}
+
+impl<V> WidgetContainer<V> for RootWidget<V> {
+  fn get_widgets(&self) -> &[Box<InterpretedWidget<V>>] {
+    &self.widgets
+  }
+
+  fn add_widget(&mut self, widget: Box<InterpretedWidget<V>>) {
     self.widgets.push(widget)
   }
 }
@@ -84,7 +115,7 @@ impl<V> RootWidget<V> {
 // TESTS ONLY
 pub struct ConsoleView;
 
-impl Widget<ConsoleView> for RootWidget<ConsoleView> {
+impl InterpretedWidget<ConsoleView> for RootWidget<ConsoleView> {
   fn redraw(&self, view: &mut ConsoleView) {
     deb!("{:#?} {:#?}", self.rect, self.layout);
     
@@ -94,7 +125,7 @@ impl Widget<ConsoleView> for RootWidget<ConsoleView> {
   }
 }
 
-impl Widget<ConsoleView> for FillRectWidget {
+impl InterpretedWidget<ConsoleView> for FillRectWidget {
   fn redraw(&self, _: &mut ConsoleView) {
     deb!("{:#?}", self);
   }
