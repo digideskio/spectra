@@ -54,16 +54,16 @@ impl FillRectWidget {
   }
 }
 
-pub struct GUI<V> {
+pub struct RootWidget<V> {
   rect: Rect,
   layout: Layout,
   color: Color,
   widgets: Vec<Box<Widget<V>>>,
 }
 
-impl<V> GUI<V> {
+impl<V> RootWidget<V> {
   pub fn new(w: Px, h: Px, layout: Layout, color: Color) -> Self {
-    GUI {
+    RootWidget {
       rect: Rect::new(Pos::new(0, 0), w, h),
       layout: layout,
       color: color,
@@ -79,7 +79,7 @@ impl<V> GUI<V> {
 // TESTS ONLY
 pub struct ConsoleView;
 
-impl Widget<ConsoleView> for GUI<ConsoleView> {
+impl Widget<ConsoleView> for RootWidget<ConsoleView> {
   fn redraw(&self, view: &mut ConsoleView) {
     deb!("{:#?} {:#?} {:#?}", self.rect, self.layout, self.color);
     
